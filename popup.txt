@@ -1,0 +1,153 @@
+function isCode(code) {
+    try {
+        eval(code)
+
+        return true
+    } catch (e) {
+
+        return false
+    }
+
+
+
+}
+/**RAMDA */
+const pipe = (...fns) => (x) => fns.reduce((v, f) => f(v), x);
+const flip = fn => a => b => fn(b)(a);
+const map = (fn, arr) => arr.reduce((acc, item, index, arr) => {
+    return acc.concat(fn(item, index, arr));
+}, []);
+
+
+var getKeyLS = (key) => localStorage.getItem(key)
+var setKeyLS = (key, value) => (value) => localStorage.setItem(key, value)
+var isKeyLS = (value) => value != null
+
+var toTag = (tag, text) => (text) => `<${tag}>${selection[0]}</${tag}>`
+var toCode = toTag('code', '')
+var toB = toTag('b')
+var toI = toTag("i")
+var toLink = (text, url) => `<a href="${url}">${text}</a>`
+
+var toN = (html) => html + '\n'
+var splitN = (text) => text.split("\n")
+var joinN = (arr) => arr.join("\n")
+
+var setTextIoTagInnerHTML = (el, text) => document.getElementById(el).innerHTML = text
+var setOutput = setTextIoTagInnerHTML('output')
+var isArrOne = (arr) => arr.length == 1
+var getSelect = (n = 0, selection) => selection[n]
+var isSelect = (selection) => !!getSelect[0]
+chrome.tabs.executeScript({
+        code: "window.getSelection().toString();"
+    },
+    function(selection) {
+        var sel = getSelect(selection)
+        var t = chrome.tabs.query({ active: true, currentWindow: true },
+            function(tabs) {
+
+
+                function sendTelegram(text, type = 'chatId') {
+                    settings[type].map(chatId => {
+                        const data = new FormData()
+                        data.append('chat_id', chatId) //settings.chatId
+                        data.append('text', text)
+                        data.append('parse_mode', 'HTML')
+                        navigator.sendBeacon(
+                            `https://api.telegram.org/bot${settings.botId}/sendMessage`,
+                            data
+                        )
+                    })
+                }
+
+
+                var urlTab = tabs[0].url
+                var setValueLS = setKeyLS(urlTab)
+                var setCode = pipe(toCode, setValueLS)
+
+                var value = getKeyLS(urlTab) //localStorage.getItem(key)
+                console.log(value)
+                    // if (value == null) { //Ключа нет
+                if (isKeyLS(value)) {
+                    //Ключа нет
+                    // sendTelegram('Ключа нет ' + !selection[0] ? "Текст пуст" : "\n" + selection[0])
+                    if (isSelect(sel)) {
+                        // Форматирование сообщения
+                        if (isCode(sel)) {
+                            // sendTelegram('Код')
+                            // textStorage = `<code>${selection[0]}</code>`
+                            // localStorage.setItem(key, textStorage);
+                            setCode(sel)
+                            setOutput('Начало добавления:Код')
+                                // document.getElementById("output").innerHTML = 'Начало добавления:Код'
+                        } else {
+                            //Текст
+
+                            // var spl = selection[0].split("\n")
+                            var spl = splitN(getSelect())
+                            var header = toB(spl.shift())
+                            var source = toLink('Источник:', urlTab) //`<a href="${tabs[0].url}">Источник:</a>\n`
+                                //header = `<b>Тема:${header}</b>\n`
+
+                            // textStorage = spl.map(t => `<i>${t}</i>`)
+                            textStorage = map(toI, spl) // spl.map(toI)
+                                //  .unshift(source)
+                                //   .unshift(header)
+                                //   .join("\n")
+                                //  spl.unshift(source)
+                                //  spl.unshift(header)
+                                //  textStorage = spl.join("\n")
+                                //Пишем в ключ    
+                                //localStorage.setItem(key, [header, "", source, "", textStorage].join("\n"));
+                            setKeyLS(urlTab, joinN([header, "", source, "", textStorage]))
+                                //  document.getElementById("output").innerHTML = 'Начало добавления:Заголовок+Источник+Текст'
+                            setOutput('Начало добавления:Заголовок+Источник+Текст')
+                        }
+
+                    } else {
+                        // Отправка сообщения
+                        var grupLink = `Обсудить:` //${grupLink}`
+                        var sendText = joinN([...splitN(value), '••••••••••', grupLink])
+                            // spl.push('••••••••••')
+                            //   spl.push('<b>Обсудить:</b>')
+                            //   var sendText = spl.join("\n")
+                        sendTelegram(sendText)
+                            // document.getElementById("output").innerHTML = "Сообщение отправлено\nКлюч очищен" //sendText
+                        setOutput('Cообщение отправлено\nКлюч очищен')
+                        localStorage.removeItem(key)
+
+                        //Удалить ключ
+                    }
+
+
+                    //   localStorage.setItem(key, selection[0]);
+
+                } else { //Ключь есть
+                    //   sendTelegram('Ключь есть ' + value);
+                    var sel
+                    if (isCode(sel)) { //Код
+
+                        textStorage = toCode(sel) //`<code>${selection[0]}</code>`
+                            // document.getElementById("output").innerHTML = 'Продолжаем добавление:Код'
+                        setOutput('Продолжаем добавление:Код')
+
+                    } else { //Текст
+
+                        var splText = splitN(getSelect()) //selection[0].split("\n")
+                        var spl = !isArrOne(splText) ? joinN(splText.map(toI)) : [toN(toB(plText[0]))]
+                        var textStorage = joinN([value, "", spl]) //.join("\n")
+                        setOutput('Продолжаем добавление:Текст')
+                            // document.getElementById("output").innerHTML = 'Продолжаем добавление:Текст'
+
+                    }
+                    //  localStorage.setItem(key, textStorage);
+                    setKeyLS(urlTab, textStorage)
+
+                }
+
+
+
+            }
+        );
+
+    });
